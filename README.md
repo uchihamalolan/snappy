@@ -14,6 +14,17 @@ A lightweight, modern Google Chrome extension built with the **WXT** framework. 
   - **Save screenshot to disk**: Saves as WebP (at quality `0.98`) to save space while retaining lossless-like fidelity.
   - **Open screenshot in new tab**: Renders the screenshot as a lossless PNG blob URL in a new tab, allowing convenient copy-to-clipboard or inspections.
 
+## Installation
+
+To install Snap Screen manually in Google Chrome without using the Chrome Web Store:
+
+1. Download the latest `.zip` file from the project's releases page.
+2. Extract the downloaded zip file into a folder on your computer.
+3. Open Google Chrome and navigate to `chrome://extensions/` (or click Chrome menu -> **Extensions** -> **Manage Extensions**).
+4. Turn on **Developer mode** using the toggle switch in the top-right corner.
+5. Click the **Load unpacked** button in the top-left corner.
+6. Select the extracted folder to load and install the extension.
+
 ## How It Works
 
 1. Right-clicking the extension icon opens the context menu where you can choose:
