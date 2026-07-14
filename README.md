@@ -1,6 +1,6 @@
 # Snap Screen (snappy)
 
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/uchihamalolan/snappy?style=flat-square)](https://github.com/uchihamalolan/snappy/releases/latest)
+[![Get Latest Release](https://img.shields.io/badge/GET_LATEST-DOWNLOAD_ZIP-2ea44f?style=for-the-badge&logo=github)](https://github.com/uchihamalolan/snappy/releases/latest/download/snap-screen.zip)
 
 A lightweight, modern Google Chrome extension built with the **WXT** framework. It provides secure tab recording and high-fidelity video frame screenshots designed to bypass basic "soft" DRM restrictions using Chrome's tab capture and offscreen documents API.
 
