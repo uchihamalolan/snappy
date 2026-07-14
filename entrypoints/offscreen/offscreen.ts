@@ -7,130 +7,130 @@ let recorder: MediaRecorder | undefined;
 let data: Blob[] = [];
 
 function getTabStream(streamId: string, options: { audio?: boolean } = {}): Promise<MediaStream> {
-	return navigator.mediaDevices.getUserMedia({
-		audio: options.audio
-			? {
-					mandatory: {
-						chromeMediaSource: "tab",
-						chromeMediaSourceId: streamId,
-					},
-				}
-			: false,
-		video: {
-			mandatory: {
-				chromeMediaSource: "tab",
-				chromeMediaSourceId: streamId,
-			},
-		},
-	});
+  return navigator.mediaDevices.getUserMedia({
+    audio: options.audio
+      ? {
+          mandatory: {
+            chromeMediaSource: "tab",
+            chromeMediaSourceId: streamId,
+          },
+        }
+      : false,
+    video: {
+      mandatory: {
+        chromeMediaSource: "tab",
+        chromeMediaSourceId: streamId,
+      },
+    },
+  });
 }
 
 function stopMediaStream(stream: MediaStream) {
-	stream.getTracks().forEach((track) => {
-		track.stop();
-	});
+  stream.getTracks().forEach((track) => {
+    track.stop();
+  });
 }
 
 function downloadUrl(url: string, filename: string) {
-	const a = document.createElement("a");
-	a.href = url;
-	a.download = filename;
-	document.body.appendChild(a);
-	a.click();
-	document.body.removeChild(a);
-	URL.revokeObjectURL(url);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 async function startRecording(streamId: string, { mode }: { mode: Mode }) {
-	if (recorder?.state === "recording") {
-		throw new Error("Called startRecording while recording is in progress.");
-	}
+  if (recorder?.state === "recording") {
+    throw new Error("Called startRecording while recording is in progress.");
+  }
 
-	const media = await getTabStream(streamId, { audio: true });
+  const media = await getTabStream(streamId, { audio: true });
 
-	// Continue to play the captured audio to the user.
-	const output = new AudioContext();
-	const source = output.createMediaStreamSource(media);
-	source.connect(output.destination);
+  // Continue to play the captured audio to the user.
+  const output = new AudioContext();
+  const source = output.createMediaStreamSource(media);
+  source.connect(output.destination);
 
-	// Start recording.
-	recorder = new MediaRecorder(media, { mimeType: "video/webm" });
+  // Start recording.
+  recorder = new MediaRecorder(media, { mimeType: "video/webm" });
 
-	recorder.ondataavailable = (event) => {
-		if (mode === "recording") {
-			data.push(event.data);
-		}
-	};
+  recorder.ondataavailable = (event) => {
+    if (mode === "recording") {
+      data.push(event.data);
+    }
+  };
 
-	recorder.onstop = async () => {
-		// if recording, open it in new tab as blob url
-		if (mode === "recording") {
-			const blob = new Blob(data, { type: "video/webm" });
-			window.open(URL.createObjectURL(blob), "_blank");
-		}
+  recorder.onstop = async () => {
+    // if recording, open it in new tab as blob url
+    if (mode === "recording") {
+      const blob = new Blob(data, { type: "video/webm" });
+      window.open(URL.createObjectURL(blob), "_blank");
+    }
 
-		// Clear state ready for next recording
-		recorder = undefined;
-		data = [];
-	};
+    // Clear state ready for next recording
+    recorder = undefined;
+    data = [];
+  };
 
-	recorder.start();
+  recorder.start();
 
-	// Record the current state in the URL. This provides a very low-bandwidth
-	// way of communicating with the service worker.
-	window.location.hash = "recording";
+  // Record the current state in the URL. This provides a very low-bandwidth
+  // way of communicating with the service worker.
+  window.location.hash = "recording";
 }
 
 async function stopRecording() {
-	if (!recorder) return;
+  if (!recorder) return;
 
-	recorder.stop();
-	stopMediaStream(recorder.stream);
+  recorder.stop();
+  stopMediaStream(recorder.stream);
 
-	// Update current state in URL
-	window.location.hash = "";
+  // Update current state in URL
+  window.location.hash = "";
 }
 
 async function captureFrame(streamId: string) {
-	const media = await getTabStream(streamId, { audio: false });
+  const media = await getTabStream(streamId, { audio: false });
 
-	const videoEl = document.createElement("video");
-	videoEl.srcObject = media;
-	const track = media.getVideoTracks()[0];
+  const videoEl = document.createElement("video");
+  videoEl.srcObject = media;
+  const track = media.getVideoTracks()[0];
 
-	const imageCapture = new (window as any).ImageCapture(track);
-	const imageBitmap = await (imageCapture as any).grabFrame();
+  const imageCapture = new (window as any).ImageCapture(track);
+  const imageBitmap = await (imageCapture as any).grabFrame();
 
-	const canvas = new OffscreenCanvas(imageBitmap.width, imageBitmap.height);
-	const context = canvas.getContext("2d");
-	if (!context) return;
-	context.drawImage(imageBitmap, 0, 0);
+  const canvas = new OffscreenCanvas(imageBitmap.width, imageBitmap.height);
+  const context = canvas.getContext("2d");
+  if (!context) return;
+  context.drawImage(imageBitmap, 0, 0);
 
-	const blob = await canvas.convertToBlob({ type: "image/webp" });
-	const url = URL.createObjectURL(blob);
+  const blob = await canvas.convertToBlob({ type: "image/webp" });
+  const url = URL.createObjectURL(blob);
 
-	downloadUrl(url, "captured_image.webp");
-	stopMediaStream(media);
+  downloadUrl(url, "captured_image.webp");
+  stopMediaStream(media);
 }
 
 function init() {
-	browser.runtime.onMessage.addListener((message) => {
-		if (message.target !== "offscreen") return;
+  browser.runtime.onMessage.addListener((message) => {
+    if (message.target !== "offscreen") return;
 
-		switch (message.type) {
-			case "start-recording":
-				startRecording(message.data, { mode: "recording" });
-				break;
-			case "stop-recording":
-				stopRecording();
-				break;
-			case "capture-frame":
-				captureFrame(message.data);
-				break;
-			default:
-				throw new Error("Unrecognized message type: " + message.type);
-		}
-	});
+    switch (message.type) {
+      case "start-recording":
+        startRecording(message.data, { mode: "recording" });
+        break;
+      case "stop-recording":
+        stopRecording();
+        break;
+      case "capture-frame":
+        captureFrame(message.data);
+        break;
+      default:
+        throw new Error("Unrecognized message type: " + message.type);
+    }
+  });
 }
 
 init();
