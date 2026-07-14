@@ -95,7 +95,7 @@ async function stopRecording() {
   window.location.hash = "";
 }
 
-async function captureFrame(streamId: string) {
+async function captureFrame(streamId: string, destination: "DOWNLOAD" | "TAB" = "DOWNLOAD") {
   const media = await getTabStream(streamId, { audio: false });
 
   const videoEl = document.createElement("video");
@@ -114,10 +114,16 @@ async function captureFrame(streamId: string) {
   context.filter = "contrast(1.03) saturate(1.05)";
   context.drawImage(imageBitmap, 0, 0);
 
-  const blob = await canvas.convertToBlob({ type: "image/webp" });
-  const url = URL.createObjectURL(blob);
+  if (destination === "TAB") {
+    const blob = await canvas.convertToBlob({ type: "image/png" });
+    const url = URL.createObjectURL(blob);
+    browser.runtime.sendMessage({ type: "open-tab", url });
+  } else {
+    const blob = await canvas.convertToBlob({ type: "image/webp", quality: 0.98 });
+    const url = URL.createObjectURL(blob);
+    downloadUrl(url, "captured_image.webp");
+  }
 
-  downloadUrl(url, "captured_image.webp");
   stopMediaStream(media);
 }
 
@@ -133,7 +139,7 @@ function init() {
         stopRecording();
         break;
       case "capture-frame":
-        captureFrame(message.data);
+        captureFrame(message.data.streamId, message.data.destination);
         break;
       default:
         throw new Error("Unrecognized message type: " + message.type);

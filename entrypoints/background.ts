@@ -2,6 +2,7 @@ import { browser } from "wxt/browser";
 import { CaptureController } from "../background/capture";
 import { setSnapStore } from "../background/store";
 import { canProceed } from "../background/utils";
+import type { SnapStore } from "../background/types";
 
 export default defineBackground(() => {
   browser.runtime.onInstalled.addListener(async () => {
@@ -20,8 +21,33 @@ export default defineBackground(() => {
       contexts: ["action"],
     });
 
+    browser.contextMenus.create({
+      id: "SNAP_DEST_SEPARATOR",
+      type: "separator",
+      contexts: ["action"],
+    });
+
+    browser.contextMenus.create({
+      id: "SNAP_DEST_DOWNLOAD",
+      title: "Save screenshot to disk",
+      type: "radio",
+      checked: true,
+      contexts: ["action"],
+    });
+    browser.contextMenus.create({
+      id: "SNAP_DEST_TAB",
+      title: "Open screenshot in new tab",
+      type: "radio",
+      checked: false,
+      contexts: ["action"],
+    });
+
     // setting initial state
-    setSnapStore({ snapScreenMode: "SCREEN_RECORD", recordingTab: -1 });
+    setSnapStore({
+      snapScreenMode: "SCREEN_CAPTURE",
+      recordingTab: -1,
+      captureDestination: "TAB",
+    } satisfies SnapStore);
   });
 
   browser.contextMenus.onClicked.addListener(async (info) => {
@@ -36,14 +62,26 @@ export default defineBackground(() => {
         case "SNAP_SCREEN_RECORD":
           await CaptureController.setMode("SCREEN_RECORD");
           break;
+        case "SNAP_DEST_DOWNLOAD":
+          await setSnapStore({ captureDestination: "DOWNLOAD" });
+          break;
+        case "SNAP_DEST_TAB":
+          await setSnapStore({ captureDestination: "TAB" });
+          break;
       }
     } catch (e) {
-      console.error("Failed to transition mode:", e);
+      console.error("Failed to transition mode or destination:", e);
     }
   });
 
   browser.action.onClicked.addListener(async (tab) => {
     if (!canProceed(tab)) return;
     void CaptureController.handleActionClick(tab);
+  });
+
+  browser.runtime.onMessage.addListener((message) => {
+    if (message.type === "open-tab") {
+      browser.tabs.create({ url: message.url });
+    }
   });
 });

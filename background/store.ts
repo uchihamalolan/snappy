@@ -1,20 +1,20 @@
 import { browser } from "wxt/browser";
-import type { SnapScreenMode } from "./types";
-
-type SnapStore = {
-  snapScreenMode: SnapScreenMode;
-  recordingTab: number;
-};
+import type { SnapStore } from "./types";
 
 type SnapScreenModeKey = Pick<SnapStore, "snapScreenMode">;
 type recordingTabKey = Pick<SnapStore, "recordingTab">;
+type captureDestinationKey = Pick<SnapStore, "captureDestination">;
 
 export async function getSnapStore(): Promise<SnapStore> {
   const { snapScreenMode } = await browser.storage.local.get<SnapScreenModeKey>("snapScreenMode");
   const { recordingTab } = await browser.storage.local.get<recordingTabKey>("recordingTab");
+  const { captureDestination } =
+    await browser.storage.local.get<captureDestinationKey>("captureDestination");
+
   return {
-    snapScreenMode: snapScreenMode,
-    recordingTab: recordingTab,
+    snapScreenMode,
+    recordingTab,
+    captureDestination,
   };
 }
 
