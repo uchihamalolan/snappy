@@ -20,6 +20,10 @@ function getTabStream(streamId: string, options: { audio?: boolean } = {}): Prom
       mandatory: {
         chromeMediaSource: "tab",
         chromeMediaSourceId: streamId,
+        minWidth: 1920,
+        minHeight: 1080,
+        maxWidth: 3840,
+        maxHeight: 2160,
       },
     },
   });
@@ -104,6 +108,10 @@ async function captureFrame(streamId: string) {
   const canvas = new OffscreenCanvas(imageBitmap.width, imageBitmap.height);
   const context = canvas.getContext("2d");
   if (!context) return;
+
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = "high";
+  context.filter = "contrast(1.03) saturate(1.05)";
   context.drawImage(imageBitmap, 0, 0);
 
   const blob = await canvas.convertToBlob({ type: "image/webp" });

@@ -7,7 +7,7 @@ export default defineConfig({
     description:
       "Adds ability to take screen shot of video and also Records the current tab in an offscreen document.",
     version: "0.0.2",
-    permissions: ["storage", "activeTab", "contextMenus", "tabCapture", "offscreen"],
+    permissions: ["storage", "activeTab", "contextMenus", "tabCapture", "offscreen", "clipboardWrite"],
     action: {
       default_icon: "icons/record-128.png",
       default_title: "Start video capture",
