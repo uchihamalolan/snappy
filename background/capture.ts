@@ -1,8 +1,14 @@
 import { browser } from "wxt/browser";
-import { getSnapStore, setSnapStore } from "./store";
-import type { MessageType } from "./types";
+import { getSnapStore, transition } from "./store";
+import type { SnapScreenMode } from "./types";
 
-type ChromeTab = chrome.tabs.Tab;
+type Tab = Browser.tabs.Tab;
+
+type MessageType =
+	| "capture-frame"
+	| "start-recording"
+	| "stop-recording";
+
 
 async function sendMessageToOffscreen({
 	type,
@@ -18,11 +24,10 @@ async function sendMessageToOffscreen({
 	});
 }
 
-async function createOffscreenDocument(tab: ChromeTab): Promise<string> {
+async function createOffscreenDocument(tab: Tab): Promise<string> {
 	const existingContexts = await browser.runtime.getContexts({});
 	const offscreenDocument = existingContexts.find((c) => c.contextType === "OFFSCREEN_DOCUMENT");
 
-	// If an offscreen document is not already open, create one.
 	if (!offscreenDocument?.documentUrl) {
 		await browser.offscreen.createDocument({
 			url: "offscreen.html",
@@ -38,58 +43,42 @@ async function createOffscreenDocument(tab: ChromeTab): Promise<string> {
 	return streamId;
 }
 
-async function startWork(type: MessageType, tab: ChromeTab) {
-	const streamId = await createOffscreenDocument(tab);
-	await sendMessageToOffscreen({ type, streamId });
-	await setSnapStore({ recordingTab: tab.id });
-}
+export const CaptureController = {
+	async setMode(mode: SnapScreenMode): Promise<void> {
+		await transition({ type: "SELECT_MODE", mode });
+	},
 
-async function stopWork(type: MessageType) {
-	await sendMessageToOffscreen({ type });
-	await setSnapStore({ recordingTab: -1 });
-}
+	async handleActionClick(tab: Tab): Promise<void> {
+		const { snapScreenMode, recordingTab } = await getSnapStore();
 
-// ------------------------------------------------------------
-// EXPORTS
-// ------------------------------------------------------------
+		if (snapScreenMode === "SCREEN_CAPTURE") {
+			try {
+				if (recordingTab !== -1) {
+					console.warn("Capture frame transition guard failed: recording active");
+					return;
+				}
+				const streamId = await createOffscreenDocument(tab);
+				sendMessageToOffscreen({ type: "capture-frame", streamId });
+			} catch (e) {
+				console.error("Failed to capture video frame:", e);
+			}
+			return;
+		}
 
-export async function captureVideoFrame(tab: ChromeTab) {
-	const streamId = await createOffscreenDocument(tab);
-	sendMessageToOffscreen({ type: "capture-frame", streamId });
-}
-
-export async function captureVideo(tab: ChromeTab) {
-	const { snapScreenMode, recordingTab } = await getSnapStore();
-
-	// if not in recording mode, then exit
-	if (snapScreenMode !== "SCREEN_RECORD") return;
-
-	// if not recording, then start new recording
-	if (recordingTab === -1) {
-		await startWork("start-recording", tab);
-		return;
+		if (snapScreenMode === "SCREEN_RECORD") {
+			try {
+				if (recordingTab === -1) {
+					const streamId = await createOffscreenDocument(tab);
+					await sendMessageToOffscreen({ type: "start-recording", streamId });
+					await transition({ type: "START_RECORDING", tabId: tab.id! });
+				} else if (recordingTab === tab.id) {
+					await sendMessageToOffscreen({ type: "stop-recording" });
+					await transition({ type: "STOP_RECORDING", tabId: tab.id });
+				}
+			} catch (e) {
+				console.error("FSM transition failed for recording action:", e);
+			}
+			return;
+		}
 	}
-
-	// if already recording, then stop recording
-	if (recordingTab === tab.id) {
-		await stopWork("stop-recording");
-		return;
-	}
-}
-
-export async function captureStream(tab: ChromeTab) {
-	const { snapScreenMode, recordingTab } = await getSnapStore();
-
-	// if not in streaming mode, then exit
-	if (snapScreenMode !== "SCREEN_STREAM") return;
-
-	if (recordingTab === -1) {
-		await startWork("start-streaming", tab);
-		return;
-	}
-
-	if (recordingTab === tab.id) {
-		await stopWork("stop-streaming");
-		return;
-	}
-}
+};

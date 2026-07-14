@@ -1,8 +1,7 @@
 import { browser } from "wxt/browser";
-import { captureStream, captureVideo, captureVideoFrame } from "../background/capture";
-import { snapScreenKeys } from "../background/constants";
-import { getSnapStore, setSnapStore } from "../background/store";
-import { canProceed, updateIcon } from "../background/utils";
+import { CaptureController } from "../background/capture";
+import { setSnapStore } from "../background/store";
+import { canProceed } from "../background/utils";
 
 export default defineBackground(() => {
 	browser.runtime.onInstalled.addListener(async () => {
@@ -20,14 +19,8 @@ export default defineBackground(() => {
 			checked: false,
 			contexts: ["action"],
 		});
-		browser.contextMenus.create({
-			id: "SNAP_SCREEN_STREAM",
-			title: "Stream ye heart",
-			type: "radio",
-			checked: false,
-			contexts: ["action"],
-		});
 
+		// setting initial state
 		setSnapStore({ snapScreenMode: "SCREEN_RECORD", recordingTab: -1 });
 	});
 
@@ -35,42 +28,22 @@ export default defineBackground(() => {
 		const { checked, menuItemId } = info;
 		if (!checked) return;
 
-		const { recordingTab } = await getSnapStore();
-		if (recordingTab !== -1) return; // don't allow to change mode if recording
-
-		switch (menuItemId) {
-			case "SNAP_SCREEN_SCREENSHOT":
-				return setSnapStore({ snapScreenMode: "SCREEN_CAPTURE" });
-			case "SNAP_SCREEN_RECORD":
-				return setSnapStore({ snapScreenMode: "SCREEN_RECORD" });
-			case "SNAP_SCREEN_STREAM":
-				return setSnapStore({ snapScreenMode: "SCREEN_STREAM" });
+		try {
+			switch (menuItemId) {
+				case "SNAP_SCREEN_SCREENSHOT":
+					await CaptureController.setMode("SCREEN_CAPTURE");
+					break;
+				case "SNAP_SCREEN_RECORD":
+					await CaptureController.setMode("SCREEN_RECORD");
+					break;
+			}
+		} catch (e) {
+			console.error("Failed to transition mode:", e);
 		}
 	});
 
 	browser.action.onClicked.addListener(async (tab) => {
 		if (!canProceed(tab)) return;
-
-		const { snapScreenMode } = await getSnapStore();
-
-		switch (snapScreenMode) {
-			case "SCREEN_CAPTURE":
-				return captureVideoFrame(tab);
-			case "SCREEN_RECORD":
-				return captureVideo(tab);
-			case "SCREEN_STREAM":
-				return captureStream(tab);
-		}
-	});
-
-	browser.storage.onChanged.addListener(async (changes) => {
-		const changedKeys = Object.keys(changes);
-
-		const shouldUpdateIcon = changedKeys.some((key) => snapScreenKeys.includes(key));
-
-		if (shouldUpdateIcon) {
-			const { snapScreenMode, recordingTab } = await getSnapStore();
-			updateIcon({ snapScreenMode, recordingTab });
-		}
+		void CaptureController.handleActionClick(tab);
 	});
 });

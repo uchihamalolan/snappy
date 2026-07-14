@@ -1,56 +1,52 @@
 import { browser } from "wxt/browser";
 
-type Mode = "recording" | "streaming" | "gif";
+type Mode = "recording" | "gif";
 
 // Global variables for storing recorder and recorded frames.
 let recorder: MediaRecorder | undefined;
 let data: Blob[] = [];
 
-browser.runtime.onMessage.addListener((message) => {
-	if (message.target !== "offscreen") return;
-
-	switch (message.type) {
-		case "start-recording":
-			startRecording(message.data, { mode: "recording" });
-			break;
-		case "stop-recording":
-			stopRecording();
-			break;
-		case "start-streaming":
-			startRecording(message.data, { mode: "streaming" });
-			break;
-		case "stop-streaming":
-			stopRecording();
-			break;
-		case "capture-frame":
-			captureFrame(message.data);
-			break;
-		default:
-			throw new Error("Unrecognized message type: " + message.type);
-	}
-});
-
-async function startRecording(streamId: string, { mode }: { mode: Mode }) {
-	if (recorder?.state === "recording") {
-		throw new Error("Called startRecording while recording is in progress.");
-	}
-
-	const media = await navigator.mediaDevices.getUserMedia({
-		audio: {
-			// @ts-expect-error - mandatory is chrome specific
-			mandatory: {
-				chromeMediaSource: "tab",
-				chromeMediaSourceId: streamId,
-			},
-		},
+function getTabStream(streamId: string, options: { audio?: boolean } = {}): Promise<MediaStream> {
+	return navigator.mediaDevices.getUserMedia({
+		audio: options.audio
+			? {
+					mandatory: {
+						chromeMediaSource: "tab",
+						chromeMediaSourceId: streamId,
+					},
+				}
+			: false,
 		video: {
-			// @ts-expect-error - mandatory is chrome specific
 			mandatory: {
 				chromeMediaSource: "tab",
 				chromeMediaSourceId: streamId,
 			},
 		},
 	});
+}
+
+function stopMediaStream(stream: MediaStream) {
+	stream.getTracks().forEach((track) => {
+		track.stop();
+	});
+}
+
+function downloadUrl(url: string, filename: string) {
+	const a = document.createElement("a");
+	a.href = url;
+	a.download = filename;
+	document.body.appendChild(a);
+	a.click();
+	document.body.removeChild(a);
+	URL.revokeObjectURL(url);
+}
+
+async function startRecording(streamId: string, { mode }: { mode: Mode }) {
+	if (recorder?.state === "recording") {
+		throw new Error("Called startRecording while recording is in progress.");
+	}
+
+	const media = await getTabStream(streamId, { audio: true });
 
 	// Continue to play the captured audio to the user.
 	const output = new AudioContext();
@@ -89,26 +85,14 @@ async function stopRecording() {
 	if (!recorder) return;
 
 	recorder.stop();
-
-	// Stopping the tracks makes sure the recording icon in the tab is removed.
-	recorder.stream.getTracks().forEach((t) => {
-		t.stop();
-	});
+	stopMediaStream(recorder.stream);
 
 	// Update current state in URL
 	window.location.hash = "";
 }
 
 async function captureFrame(streamId: string) {
-	const media = await navigator.mediaDevices.getUserMedia({
-		video: {
-			// @ts-expect-error - mandatory is chrome specific
-			mandatory: {
-				chromeMediaSource: "tab",
-				chromeMediaSourceId: streamId,
-			},
-		},
-	});
+	const media = await getTabStream(streamId, { audio: false });
 
 	const videoEl = document.createElement("video");
 	videoEl.srcObject = media;
@@ -125,16 +109,28 @@ async function captureFrame(streamId: string) {
 	const blob = await canvas.convertToBlob({ type: "image/webp" });
 	const url = URL.createObjectURL(blob);
 
-	// download the frame
-	const a = document.createElement("a");
-	a.href = url;
-	a.download = "captured_image.webp";
-	document.body.appendChild(a);
-	a.click();
-	document.body.removeChild(a);
-	URL.revokeObjectURL(url);
-
-	// cleanup
-	track.stop();
+	downloadUrl(url, "captured_image.webp");
+	stopMediaStream(media);
 }
-export {};
+
+function init() {
+	browser.runtime.onMessage.addListener((message) => {
+		if (message.target !== "offscreen") return;
+
+		switch (message.type) {
+			case "start-recording":
+				startRecording(message.data, { mode: "recording" });
+				break;
+			case "stop-recording":
+				stopRecording();
+				break;
+			case "capture-frame":
+				captureFrame(message.data);
+				break;
+			default:
+				throw new Error("Unrecognized message type: " + message.type);
+		}
+	});
+}
+
+init();

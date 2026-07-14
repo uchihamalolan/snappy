@@ -1,6 +1,3 @@
-import { setActionButton } from "./store";
-import type { SnapStore } from "./types";
-
 export function isValidUrl(url: string) {
 	const allowedVideoUrls = [
 		// with www
@@ -26,7 +23,7 @@ export function isValidUrl(url: string) {
 	return allowedVideoUrls.includes(url);
 }
 
-export function canProceed(tab: chrome.tabs.Tab) {
+export function canProceed(tab: Browser.tabs.Tab) {
 	if (!tab?.url || !tab?.id) {
 		console.error("Tab is not valid");
 		return false;
@@ -39,28 +36,4 @@ export function canProceed(tab: chrome.tabs.Tab) {
 	}
 
 	return true;
-}
-
-export function updateIcon({ snapScreenMode, recordingTab }: SnapStore) {
-	const isRecording = recordingTab !== -1;
-
-	switch (snapScreenMode) {
-		case "SCREEN_RECORD":
-			setActionButton(
-				isRecording ? "/icons/recording-128.png" : "/icons/record-128.png",
-				isRecording ? "Stop recording" : "Start recording",
-				recordingTab,
-			);
-			break;
-		case "SCREEN_STREAM":
-			setActionButton(
-				isRecording ? "/icons/streaming-128.png" : "/icons/stream-128.png",
-				isRecording ? "Stop streaming" : "Start streaming",
-				recordingTab,
-			);
-			break;
-		case "SCREEN_CAPTURE":
-			setActionButton("/icons/camera-128.png", "Take screenshot", recordingTab);
-			break;
-	}
 }
