@@ -84,4 +84,18 @@ export default defineBackground(() => {
       browser.tabs.create({ url: message.url });
     }
   });
+
+  browser.commands.onCommand.addListener(async (command) => {
+    if (command === "trigger-action") {
+      try {
+        const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+        const tab = tabs[0];
+        if (tab && canProceed(tab)) {
+          void CaptureController.handleActionClick(tab);
+        }
+      } catch (e) {
+        console.error("Failed handling shortcut command:", e);
+      }
+    }
+  });
 });

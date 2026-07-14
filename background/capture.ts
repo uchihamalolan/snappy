@@ -1,6 +1,6 @@
 import { browser } from "wxt/browser";
 import { getSnapStore } from "./store";
-import type { SnapScreenMode, OffscreenMessage } from "./types";
+import type { SnapScreenMode, OffscreenMessage, VideoRect } from "./types";
 import { transition } from "./fsm";
 
 type Tab = Browser.tabs.Tab;
@@ -10,6 +10,33 @@ async function sendMessageToOffscreen(message: OffscreenMessage) {
     ...message,
     target: "offscreen",
   });
+}
+
+async function getVideoRect(tabId: number): Promise<VideoRect | null> {
+  try {
+    const results = await browser.scripting.executeScript({
+      target: { tabId },
+      func: () => {
+        const video = document.querySelector("video");
+        if (video) {
+          const rect = video.getBoundingClientRect();
+          return {
+            x: rect.left,
+            y: rect.top,
+            width: rect.width,
+            height: rect.height,
+            viewportWidth: window.innerWidth,
+            viewportHeight: window.innerHeight,
+          } satisfies VideoRect;
+        }
+        return null;
+      },
+    });
+    return results?.[0]?.result ?? null;
+  } catch (err) {
+    console.warn("Failed to retrieve video bounding rect:", err);
+    return null;
+  }
 }
 
 async function createOffscreenDocument(tab: Tab): Promise<string> {
@@ -45,10 +72,11 @@ export const CaptureController = {
           console.warn("Capture frame transition guard failed: recording active");
           return;
         }
+        const videoRect = await getVideoRect(tab.id!);
         const streamId = await createOffscreenDocument(tab);
         sendMessageToOffscreen({
           type: "capture-frame",
-          data: { streamId, destination: captureDestination },
+          data: { streamId, destination: captureDestination, videoRect },
         });
       } catch (e) {
         console.error("Failed to capture video frame:", e);

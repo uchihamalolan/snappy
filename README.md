@@ -30,8 +30,8 @@ To install Snap Screen manually in Google Chrome without using the Chrome Web St
 ## How It Works
 
 1. Right-clicking the extension icon opens the context menu where you can choose:
-   - **Mode**: *Record screen* or *Take a screenshot*.
-   - **Destination**: *Save screenshot to disk* or *Open screenshot in new tab*.
+   - **Mode**: _Record screen_ or _Take a screenshot_.
+   - **Destination**: _Save screenshot to disk_ or _Open screenshot in new tab_.
 2. Clicking the extension button triggers the active mode:
    - In recording mode: Sets badge state to indicate active status and captures WebM video.
    - In screenshot mode: Captures the active tab stream, extracts the image bitmap using the `ImageCapture` API, enhances colors, and saves/opens according to destination settings.

@@ -1,3 +1,4 @@
+import type { CaptureDestination, VideoRect } from "@/background/types";
 import { browser } from "wxt/browser";
 
 type Mode = "recording" | "gif";
@@ -95,7 +96,11 @@ async function stopRecording() {
   window.location.hash = "";
 }
 
-async function captureFrame(streamId: string, destination: "DOWNLOAD" | "TAB" = "DOWNLOAD") {
+async function captureFrame(
+  streamId: string,
+  destination: CaptureDestination = "DOWNLOAD",
+  videoRect?: VideoRect | null,
+) {
   const media = await getTabStream(streamId, { audio: false });
 
   const videoEl = document.createElement("video");
@@ -105,14 +110,47 @@ async function captureFrame(streamId: string, destination: "DOWNLOAD" | "TAB" = 
   const imageCapture = new (window as any).ImageCapture(track);
   const imageBitmap = await (imageCapture as any).grabFrame();
 
-  const canvas = new OffscreenCanvas(imageBitmap.width, imageBitmap.height);
+  let cropX = 0,
+    cropY = 0,
+    cropWidth = imageBitmap.width,
+    cropHeight = imageBitmap.height;
+
+  if (videoRect) {
+    const scaleX = imageBitmap.width / videoRect.viewportWidth;
+    const scaleY = imageBitmap.height / videoRect.viewportHeight;
+
+    cropX = videoRect.x * scaleX;
+    cropY = videoRect.y * scaleY;
+    cropWidth = videoRect.width * scaleX;
+    cropHeight = videoRect.height * scaleY;
+
+    if (cropWidth <= 0 || cropWidth > imageBitmap.width) cropWidth = imageBitmap.width;
+    if (cropHeight <= 0 || cropHeight > imageBitmap.height) cropHeight = imageBitmap.height;
+  }
+
+  const canvas = new OffscreenCanvas(cropWidth, cropHeight);
   const context = canvas.getContext("2d");
   if (!context) return;
 
   context.imageSmoothingEnabled = true;
   context.imageSmoothingQuality = "high";
   context.filter = "contrast(1.03) saturate(1.05)";
-  context.drawImage(imageBitmap, 0, 0);
+
+  if (videoRect) {
+    context.drawImage(
+      imageBitmap,
+      cropX,
+      cropY,
+      cropWidth,
+      cropHeight,
+      0,
+      0,
+      cropWidth,
+      cropHeight,
+    );
+  } else {
+    context.drawImage(imageBitmap, 0, 0);
+  }
 
   if (destination === "TAB") {
     const blob = await canvas.convertToBlob({ type: "image/png" });
@@ -139,7 +177,7 @@ function init() {
         stopRecording();
         break;
       case "capture-frame":
-        captureFrame(message.data.streamId, message.data.destination);
+        captureFrame(message.data.streamId, message.data.destination, message.data.videoRect);
         break;
       default:
         throw new Error("Unrecognized message type: " + message.type);

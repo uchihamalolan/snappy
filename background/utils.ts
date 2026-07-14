@@ -31,7 +31,6 @@ export function canProceed(tab: Browser.tabs.Tab) {
 
   const url = new URL(tab.url);
   if (!isValidUrl(url.hostname)) {
-    console.error("URL is not valid", url.hostname);
     return false;
   }
 

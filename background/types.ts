@@ -7,7 +7,23 @@ export type SnapStore = {
   captureDestination: CaptureDestination;
 };
 
+export type VideoRect = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  viewportWidth: number;
+  viewportHeight: number;
+};
+
 export type OffscreenMessage =
   | { type: "start-recording"; data: string }
   | { type: "stop-recording" }
-  | { type: "capture-frame"; data: { streamId: string; destination: CaptureDestination } };
+  | {
+      type: "capture-frame";
+      data: {
+        streamId: string;
+        destination: CaptureDestination;
+        videoRect?: VideoRect | null;
+      };
+    };
