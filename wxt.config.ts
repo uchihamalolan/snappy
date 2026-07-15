@@ -28,5 +28,12 @@ export default defineConfig({
         description: "Trigger screenshot or start/stop recording",
       },
     },
+    browser_specific_settings: {
+      gecko: {
+        id: "snappy@malolan.net",
+        strict_min_version: "142.0",
+        data_collection_permissions: { required: ["none"] },
+      },
+    },
   },
 });
