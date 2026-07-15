@@ -1,4 +1,5 @@
 import { browser } from "wxt/browser";
+
 import type { SnapStore } from "./types";
 
 type SnapScreenModeKey = Pick<SnapStore, "snapScreenMode">;

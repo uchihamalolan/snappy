@@ -1,4 +1,5 @@
-import { browser } from "wxt/browser";
+import { browser, type Browser } from "wxt/browser";
+
 import { getSnapStore } from "./store";
 import type { SnapScreenMode, OffscreenMessage, VideoRect } from "./types";
 import { transition } from "./fsm";

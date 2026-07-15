@@ -1,3 +1,5 @@
+import type { Browser } from "wxt/browser";
+
 export function isValidUrl(url: string) {
   const allowedVideoUrls = [
     // with www

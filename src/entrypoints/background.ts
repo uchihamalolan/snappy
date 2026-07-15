@@ -1,4 +1,6 @@
+import { defineBackground } from "wxt/utils/define-background";
 import { browser } from "wxt/browser";
+
 import { CaptureController } from "../common/capture";
 import { setSnapStore } from "../common/store";
 import { canProceed } from "../common/utils";
