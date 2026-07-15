@@ -1,8 +1,8 @@
 import { browser } from "wxt/browser";
-import { CaptureController } from "../background/capture";
-import { setSnapStore } from "../background/store";
-import { canProceed } from "../background/utils";
-import type { SnapStore } from "../background/types";
+import { CaptureController } from "../common/capture";
+import { setSnapStore } from "../common/store";
+import { canProceed } from "../common/utils";
+import type { SnapStore } from "../common/types";
 
 export default defineBackground(() => {
   browser.runtime.onInstalled.addListener(async () => {

@@ -1,4 +1,4 @@
-import type { CaptureDestination, VideoRect } from "@/background/types";
+import type { CaptureDestination, VideoRect } from "@/src/common/types";
 import { browser } from "wxt/browser";
 
 type Mode = "recording" | "gif";
